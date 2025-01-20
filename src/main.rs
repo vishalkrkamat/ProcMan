@@ -66,6 +66,13 @@ impl Status {
             threads,
         })
     }
+    fn display_momory(&self) -> String {
+        if self.memory > 1024 {
+            format!("{} MB", self.memory / 1024) // Convert to MB if > 1024 KB
+        } else {
+            format!("{} KB", self.memory) // Keep in KB
+        }
+    }
 }
 fn main() {
     match Process::process_list() {
@@ -76,8 +83,11 @@ fn main() {
                 match Status::parse(id) {
                     Ok(status) => {
                         println!(
-                            "PID: {} | Name: {} | Memory: {} KB | Threads: {}",
-                            id, status.name, status.memory, status.threads
+                            "PID: {} | Name: {} | Memory: {} | Threads: {}",
+                            id,
+                            status.name,
+                            status.display_momory(),
+                            status.threads
                         );
                     }
                     Err(e) => {
