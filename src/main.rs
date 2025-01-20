@@ -34,23 +34,58 @@ impl Process {
         Ok(procid)
     }
 }
-
+impl Status {
+    fn parse(pid: &str) -> Result<Status, io::Error> {
+        let dir_path = format!("/proc/{pid}/status");
+        let content = fs::read_to_string(&dir_path)?;
+        let mut name = String::new();
+        let mut memory: u64 = 0;
+        let mut threads: u32 = 0;
+        for line in content.lines() {
+            if line.starts_with("Name") {
+                name = line.split_whitespace().nth(1).unwrap_or("").to_string();
+            } else if line.starts_with("VmRSS:") {
+                memory = line
+                    .split_whitespace()
+                    .nth(1)
+                    .unwrap_or("0")
+                    .parse()
+                    .unwrap_or(0);
+            } else if line.starts_with("Threads:") {
+                threads = line
+                    .split_whitespace()
+                    .nth(1)
+                    .unwrap_or("0")
+                    .parse()
+                    .unwrap_or(0);
+            }
+        }
+        Ok(Status {
+            name,
+            memory,
+            threads,
+        })
+    }
+}
 fn main() {
     match Process::process_list() {
         Ok(procid) => {
             let no_process = procid.len();
-            println!("Process IDs found: {:?}", procid);
             println!("NO of process: {no_process}");
             for id in procid.iter() {
-                status(id.to_string());
+                match Status::parse(id) {
+                    Ok(status) => {
+                        println!(
+                            "PID: {} | Name: {} | Memory: {} KB | Threads: {}",
+                            id, status.name, status.memory, status.threads
+                        );
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to parse status for PID {}: {}", id, e);
+                    }
+                };
             }
         }
         Err(_) => eprintln!("Error reading process list:"),
     };
-}
-fn status(id: String) -> io::Result<()> {
-    let dir_path = format!("/proc/{}/status", id);
-    let read = fs::read_to_string(dir_path);
-    println!("{read:?}");
-    Ok(())
 }
