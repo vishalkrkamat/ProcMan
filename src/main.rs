@@ -14,24 +14,30 @@ struct Status {
 }
 
 impl Process {
-    fn process_list() -> Result<Vec<String>, io::Error> {
+    fn process_list() -> Result<Vec<Process>, io::Error> {
         let dir = "/proc/";
-        let mut procid = Vec::new();
+        let mut processes = Vec::new();
 
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
+
             if path.is_dir() {
                 if let Some(name) = path.file_name() {
                     if let Some(name_str) = name.to_str() {
                         if name_str.parse::<u64>().is_ok() {
-                            procid.push(name_str.to_string());
+                            if let Ok(status) = Status::parse(name_str) {
+                                processes.push(Process {
+                                    pid: name_str.to_string(),
+                                    status,
+                                });
+                            }
                         }
                     }
                 }
             }
         }
-        Ok(procid)
+        Ok(processes)
     }
 }
 impl Status {
@@ -66,7 +72,7 @@ impl Status {
             threads,
         })
     }
-    fn display_momory(&self) -> String {
+    fn display_memory(&self) -> String {
         if self.memory > 1024 {
             format!("{} MB", self.memory / 1024) // Convert to MB if > 1024 KB
         } else {
@@ -76,26 +82,21 @@ impl Status {
 }
 fn main() {
     match Process::process_list() {
-        Ok(procid) => {
-            let no_process = procid.len();
-            println!("NO of process: {no_process}");
-            for id in procid.iter() {
-                match Status::parse(id) {
-                    Ok(status) => {
-                        println!(
-                            "PID: {} | Name: {} | Memory: {} | Threads: {}",
-                            id,
-                            status.name,
-                            status.display_momory(),
-                            status.threads
-                        );
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to parse status for PID {}: {}", id, e);
-                    }
-                };
+        Ok(processes) => {
+            println!("Number of processes: {}", processes.len());
+
+            for process in processes {
+                println!(
+                    "PID: {} | Name: {} | Memory: {} | Threads: {}",
+                    process.pid,
+                    process.status.name,
+                    process.status.display_memory(),
+                    process.status.threads
+                );
             }
         }
-        Err(_) => eprintln!("Error reading process list:"),
+        Err(e) => {
+            eprintln!("Error reading process list: {}", e);
+        }
     };
 }
