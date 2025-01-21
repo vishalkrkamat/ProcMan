@@ -22,10 +22,4 @@ The program performs the following tasks:
   - `Status::parse(pid)`: Parses status file for details.
   - `Status::display_memory()`: Formats memory output.
 
-## Running the Program
 
-### Build and Run:
-
-```bash
-cargo build --release
-./target/release/process-monitor
